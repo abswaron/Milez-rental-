@@ -13,6 +13,12 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans scroll-smooth;
+  }
 }
 
 .glass {
@@ -21,6 +27,22 @@
 
 .glass-dark {
   @apply bg-black/40 backdrop-blur-lg border border-white/10;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-brand-orange/40 rounded-full transition-colors;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  @apply bg-brand-orange/60;
 }
 
 @import "tw-animate-css";
@@ -139,16 +161,4 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-    }
-  body {
-    @apply bg-background text-foreground;
-    }
-  html {
-    @apply font-sans;
-    }
 }

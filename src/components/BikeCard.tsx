@@ -44,7 +44,7 @@ export default function BikeCard({ bike, onBook }: BikeCardProps) {
           <div className="flex justify-between items-start mb-4">
             <div>
               <h3 className="text-xl font-bold text-brand-dark mb-1">{bike.name}</h3>
-              <p className="text-sm text-gray-500 font-medium">{bike.specs.engine || bike.specs.range}</p>
+              <p className="text-sm text-gray-500 font-medium">{bike.specs?.engine || bike.specs?.range || 'N/A'}</p>
             </div>
             <div className="text-right">
               <p className="text-2xl font-black text-brand-orange">₹{bike.pricePerDay}</p>

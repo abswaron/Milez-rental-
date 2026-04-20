@@ -1,4 +1,5 @@
 import { Bike, Instagram, Facebook, Twitter, Mail, Phone, MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Footer() {
   const scrollToSection = (id: string) => {
@@ -103,9 +104,9 @@ export default function Footer() {
             © 2024 Milez Bike Rentals. All rights reserved.
           </p>
           <div className="flex gap-8">
-            <a href="#" className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-brand-orange transition-colors">Terms</a>
-            <a href="#" className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-brand-orange transition-colors">Privacy</a>
-            <a href="#" className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-brand-orange transition-colors">Cookies</a>
+            <Link to="/legal" className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-brand-orange transition-colors">Terms</Link>
+            <Link to="/legal" className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-brand-orange transition-colors">Privacy</Link>
+            <Link to="/legal" className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-brand-orange transition-colors">Refunds</Link>
           </div>
         </div>
       </div>

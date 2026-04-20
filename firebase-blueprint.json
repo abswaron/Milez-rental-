@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "phone": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "phone", "role"]
+    },
+    "Bike": {
+      "title": "Bike",
+      "description": "A vehicle in the fleet",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Scooter", "Cruiser", "Sport", "Electric"] },
+        "pricePerDay": { "type": "number" },
+        "image": { "type": "string" },
+        "transmission": { "type": "string" },
+        "fuelType": { "type": "string" },
+        "locations": { "type": "array", "items": { "type": "string" } },
+        "specs": { "type": "object" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "maintenance", "retired"] }
+      },
+      "required": ["id", "name", "type", "pricePerDay", "image", "status"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "A bike rental booking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "bike": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "image": { "type": "string" },
+            "type": { "type": "string" },
+            "pricePerDay": { "type": "number" }
+          }
+        },
+        "bookingDetails": {
+          "type": "object",
+          "properties": {
+            "pickupLocation": { "type": "string" },
+            "dropoffLocation": { "type": "string" },
+            "pickupDate": { "type": "string" },
+            "pickupTime": { "type": "string" },
+            "dropoffDate": { "type": "string" },
+            "dropoffTime": { "type": "string" }
+          }
+        },
+        "userDetails": {
+          "type": "object",
+          "properties": {
+            "firstName": { "type": "string" },
+            "lastName": { "type": "string" },
+            "email": { "type": "string" },
+            "phone": { "type": "string" }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["confirmed", "cancelled", "completed"] }
+      },
+      "required": ["userId", "bike", "bookingDetails", "userDetails", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/bikes/{bikeId}": {
+      "schema": "Bike",
+      "description": "Global bike fleet"
+    },
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/users/{uid}/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "User-specific bookings"
+    }
+  }
+}

@@ -1,0 +1,118 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {uid}
+// Fields:
+//   - uid: string (required)
+//   - phone: string (required)
+//   - firstName: string (optional)
+//   - lastName: string (optional)
+//   - email: string (optional)
+//   - createdAt: timestamp (required)
+//
+// Collection: users/{uid}/bookings
+// Document ID: {bookingId}
+// Fields:
+//   - userId: string (required, must match parent uid)
+//   - bike: map (required)
+//   - bookingDetails: map (required)
+//   - userDetails: map (required)
+//   - timestamp: timestamp (required)
+//   - status: string (required, enum: confirmed, cancelled, completed)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         request.auth.token.email == "abswaron31@gmail.com");
+    }
+
+    function isValidUser(data) {
+      return data.uid is string &&
+             data.phone is string &&
+             data.role in ['user', 'admin'];
+    }
+
+    function isValidBike(data) {
+      return data.keys().hasAll(['id', 'name', 'type', 'pricePerDay', 'image', 'status']) &&
+             data.id is string &&
+             data.name is string &&
+             data.type in ['Scooter', 'Cruiser', 'Sport', 'Electric'] &&
+             data.pricePerDay is number &&
+             data.pricePerDay > 0 &&
+             data.image is string &&
+             data.status in ['available', 'maintenance', 'retired'];
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll(['userId', 'bike', 'bookingDetails', 'userDetails', 'timestamp', 'status']) &&
+             data.userId is string &&
+             data.bike is map &&
+             data.bookingDetails is map &&
+             data.userDetails is map &&
+             data.timestamp is timestamp &&
+             data.status in ['pending', 'confirmed', 'cancelled', 'completed'] &&
+             (!('paymentMethod' in data) || data.paymentMethod in ['online', 'store']) &&
+             (!('pricing' in data) || data.pricing is map);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /bikes/{bikeId} {
+      allow read: if true; // Publicly viewable fleet
+      allow write: if isAdmin(); // Only admins can manage fleet
+    }
+
+    // Public bookings for availability checks (No PII)
+    match /public_bookings/{bookingId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Collection Group rules for availability checks (Legacy/Authenticated)
+    match /{path=**}/bookings/{bookingId} {
+      // Allow authenticated users to query bookings to check availability
+      // This is necessary because bookings are stored under /users/{uid}/bookings
+      allow list: if isAuthenticated();
+      allow get: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) && isValidUser(request.resource.data);
+      allow update: if (isOwner(uid) && isValidUser(request.resource.data) && 
+                        request.resource.data.uid == resource.data.uid) || isAdmin();
+
+      match /bookings/{bookingId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidBooking(request.resource.data) && 
+                        request.resource.data.userId == uid;
+        allow update: if isOwner(uid) && isValidBooking(request.resource.data) && 
+                        request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(uid);
+      }
+    }
+  }
+}

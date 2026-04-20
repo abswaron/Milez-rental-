@@ -12,6 +12,35 @@ export interface Bike {
     range?: string;
     topSpeed?: string;
   };
+  description?: string;
+  status?: 'available' | 'maintenance' | 'retired';
+}
+
+export interface Booking {
+  id: string;
+  userId: string;
+  bike: Partial<Bike>;
+  bookingDetails: {
+    pickupLocation: string;
+    dropoffLocation: string;
+    pickupDate: string;
+    pickupTime: string;
+    dropoffDate: string;
+    dropoffTime: string;
+  };
+  userDetails: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+  };
+  documents?: {
+    licenseUrl?: string;
+    idProofUrl?: string;
+  };
+  status: 'confirmed' | 'cancelled' | 'completed';
+  paymentMethod: 'online' | 'store';
+  timestamp: any;
 }
 
 export interface BookingDetails {
