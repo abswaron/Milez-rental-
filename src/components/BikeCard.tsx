@@ -8,21 +8,33 @@ import { motion } from 'motion/react';
 interface BikeCardProps {
   bike: BikeType;
   onBook: (bike: BikeType) => void;
+  priority?: boolean;
 }
 
-export default function BikeCard({ bike, onBook }: BikeCardProps) {
+export default function BikeCard({ bike, onBook, priority }: BikeCardProps) {
+  // Optimize Unsplash image URLs
+  const optimizedImage = bike.image.includes('unsplash.com') 
+    ? `${bike.image.split('?')[0]}?auto=format&fit=crop&q=70&w=600&fm=webp`
+    : bike.image;
+
   return (
     <motion.div
-      whileHover={{ y: -10 }}
-      transition={{ duration: 0.3 }}
+      className="h-full"
     >
-      <Card className="overflow-hidden border-none bg-white shadow-xl shadow-gray-200/50 rounded-3xl group">
-        <div className="relative aspect-[4/3] overflow-hidden">
+      <Card className="flex flex-col h-full overflow-hidden border-none bg-white shadow-xl shadow-gray-200/50 rounded-3xl group">
+        <div className="relative aspect-[4/3] overflow-hidden shrink-0 bg-gray-100 animate-in fade-in duration-500">
           <img
-            src={bike.image}
+            src={optimizedImage}
             alt={bike.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            loading={priority ? "eager" : "lazy"}
+            decoding={priority ? "sync" : "async"}
+            className="w-full h-full object-cover transition-transform duration-500"
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = `https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&q=60&w=600`;
+              target.onerror = null; // Prevent infinite loop
+            }}
           />
           <Badge className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-brand-dark border-none font-bold">
             {bike.type}
@@ -40,24 +52,31 @@ export default function BikeCard({ bike, onBook }: BikeCardProps) {
             </div>
           </div>
         </div>
-        <CardContent className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="text-xl font-bold text-brand-dark mb-1">{bike.name}</h3>
-              <p className="text-sm text-gray-500 font-medium">{bike.specs?.engine || bike.specs?.range || 'N/A'}</p>
+        <CardContent className="p-6 flex-grow flex flex-col min-h-0">
+          <div className="flex justify-between items-start mb-4 gap-2 h-[64px]">
+            <div className="min-w-0">
+              <h3 className="text-xl font-bold text-brand-dark mb-1 line-clamp-1">{bike.name}</h3>
+              <p className="text-sm text-gray-400 font-medium">{bike.specs?.engine || bike.specs?.range || 'N/A'}</p>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-black text-brand-orange">₹{bike.pricePerDay}</p>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Per Day</p>
+            <div className="text-right shrink-0">
+              <p className="text-2xl font-black text-brand-orange leading-none">₹{bike.pricePerDay}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Per Day</p>
             </div>
           </div>
           
-          <div className="flex flex-wrap gap-2 mb-6">
-            {bike.locations.map(loc => (
-              <span key={loc} className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-md uppercase tracking-wider">
-                {loc}
-              </span>
-            ))}
+          <div className="mt-auto mb-2">
+            <div className="flex flex-wrap gap-1.5">
+              {bike.locations.slice(0, 2).map(loc => (
+                <span key={loc} className="text-[9px] md:text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-md uppercase tracking-wider whitespace-nowrap">
+                  {loc.split(',')[0]}
+                </span>
+              ))}
+              {bike.locations.length > 2 && (
+                <span className="text-[9px] md:text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                  +{bike.locations.length - 2}
+                </span>
+              )}
+            </div>
           </div>
         </CardContent>
         <CardFooter className="p-6 pt-0">
@@ -66,7 +85,7 @@ export default function BikeCard({ bike, onBook }: BikeCardProps) {
             onClick={() => onBook(bike)}
           >
             Rent Now
-            <ChevronRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+            <ChevronRight className="w-4 h-4 ml-2" />
           </Button>
         </CardFooter>
       </Card>

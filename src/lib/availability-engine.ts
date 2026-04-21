@@ -1,6 +1,6 @@
 import { db } from './firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { areIntervalsOverlapping } from 'date-fns';
+import { areIntervalsOverlapping, parse } from 'date-fns';
 
 export async function checkBikeAvailability(
   bikeId: string,
@@ -24,7 +24,7 @@ export async function checkBikeAvailability(
   const q = query(
     bookingsRef,
     where('bike.id', '==', bikeId),
-    where('status', '==', 'confirmed')
+    where('status', 'in', ['confirmed', 'pending']) // Check both pending and confirmed
   );
 
   try {
@@ -33,12 +33,28 @@ export async function checkBikeAvailability(
     for (const doc of snapshot.docs) {
       const booking = doc.data() as any;
       
-      // Handle potential string dates from Firestore
-      const b_start = new Date(booking.bookingDetails.pickupDate);
+      // Robust date parsing
+      let b_start: Date;
+      let b_end: Date;
+
+      try {
+        // Try parsing the 'PPP' format (e.g., "Oct 24, 2023")
+        b_start = parse(booking.bookingDetails.pickupDate, 'PPP', new Date());
+        b_end = parse(booking.bookingDetails.dropoffDate, 'PPP', new Date());
+        
+        // If parse fails or results in Invalid Date, fallback to new Date()
+        if (isNaN(b_start.getTime())) b_start = new Date(booking.bookingDetails.pickupDate);
+        if (isNaN(b_end.getTime())) b_end = new Date(booking.bookingDetails.dropoffDate);
+      } catch (e) {
+        b_start = new Date(booking.bookingDetails.pickupDate);
+        b_end = new Date(booking.bookingDetails.dropoffDate);
+      }
+
+      if (isNaN(b_start.getTime()) || isNaN(b_end.getTime())) continue;
+      
       const [bp_h, bp_m] = booking.bookingDetails.pickupTime.split(':').map(Number);
       b_start.setHours(bp_h, bp_m, 0, 0);
 
-      const b_end = new Date(booking.bookingDetails.dropoffDate);
       const [bd_h, bd_m] = booking.bookingDetails.dropoffTime.split(':').map(Number);
       b_end.setHours(bd_h, bd_m, 0, 0);
 
@@ -50,9 +66,7 @@ export async function checkBikeAvailability(
       }
     }
   } catch (error: any) {
-    if (error.message?.includes('permissions')) {
-      console.error('Permission denied for availability check. Ensure firestore.rules allow collectionGroup read.');
-    }
+    console.error('Error checking availability:', error);
     throw error;
   }
 

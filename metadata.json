@@ -1,5 +1,5 @@
 {
   "name": "Milez - Premium Bike Rentals",
-  "description": "Explore Tamil Nadu on two wheels. Premium bike rentals in Chennai, Coimbatore, and Ooty with Milez.",
+  "description": "Premium bike rental service in Tamil Nadu. The best bikes and scooters in Chennai, Coimbatore, and Ooty are here at Milez.",
   "requestFramePermissions": ["geolocation"]
 }

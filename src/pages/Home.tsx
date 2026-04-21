@@ -6,6 +6,7 @@ import Testimonials from '../components/Testimonials';
 import HowItWorks from '../components/HowItWorks';
 import MyBookings from '../components/MyBookings';
 import BookingModal from '../components/BookingModal';
+import LoginModal from '../components/LoginModal';
 import { motion, useScroll, useSpring } from 'motion/react';
 import { Shield, Clock, Wallet } from 'lucide-react';
 import { Bike, BookingDetails } from '../types';
@@ -29,6 +30,7 @@ export default function Home() {
 
   const [selectedBike, setSelectedBike] = useState<Bike | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const handleBookBike = (bike: Bike) => {
     if (!bookingDetails.pickupLocation) {
@@ -144,6 +146,13 @@ export default function Home() {
         onClose={() => setIsBookingModalOpen(false)}
         bookingDetails={bookingDetails}
         setBookingDetails={setBookingDetails}
+        onShowLogin={() => setIsLoginModalOpen(true)}
+      />
+
+      <LoginModal 
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSuccess={() => setIsBookingModalOpen(true)}
       />
     </div>
   );

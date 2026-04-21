@@ -24,10 +24,11 @@ interface BookingModalProps {
   bookingDetails: BookingDetails;
   setBookingDetails: React.Dispatch<React.SetStateAction<BookingDetails>>;
   onBookingSuccess?: () => void;
+  onShowLogin?: () => void;
 }
 
-export default function BookingModal({ bike, isOpen, onClose, bookingDetails, setBookingDetails, onBookingSuccess }: BookingModalProps) {
-  const { user } = useAuth();
+export default function BookingModal({ bike, isOpen, onClose, bookingDetails, setBookingDetails, onBookingSuccess, onShowLogin }: BookingModalProps) {
+  const { user, profile } = useAuth();
   const [step, setStep] = useState(1);
 
   useEffect(() => {
@@ -52,18 +53,24 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
   const [serverWarning, setServerWarning] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
 
+  const [isPickupDateOpen, setIsPickupDateOpen] = useState(false);
+  const [isPickupTimeOpen, setIsPickupTimeOpen] = useState(false);
+  const [isDropoffDateOpen, setIsDropoffDateOpen] = useState(false);
+  const [isDropoffTimeOpen, setIsDropoffTimeOpen] = useState(false);
+
   const [userDetails, setUserDetails] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    phone: user?.phoneNumber || ''
+    phone: user?.phoneNumber || profile?.phone || ''
   });
 
   useEffect(() => {
-    if (user?.phoneNumber) {
-      setUserDetails(prev => ({ ...prev, phone: user.phoneNumber || '' }));
+    const phone = user?.phoneNumber || profile?.phone;
+    if (phone) {
+      setUserDetails(prev => ({ ...prev, phone }));
     }
-  }, [user]);
+  }, [user, profile]);
 
   if (!bike) return null;
 
@@ -71,7 +78,9 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
     const newErrors: Record<string, string> = {};
     
     if (!user) {
-      newErrors.auth = 'Please login in the "My Bookings" section first to book a bike.';
+      onClose();
+      if (onShowLogin) onShowLogin();
+      return false;
     }
 
     // Booking Details Validation
@@ -240,11 +249,34 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
           prefill: {
             name: `${userDetails.firstName} ${userDetails.lastName}`,
             email: userDetails.email,
-            contact: user.phoneNumber,
+            contact: user.phoneNumber?.replace(/\s+/g, '') || userDetails.phone?.replace(/\s+/g, ''),
+          },
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'UPI / Google Pay / PhonePe',
+                  instruments: [
+                    {
+                      method: 'upi'
+                    }
+                  ]
+                }
+              },
+              sequence: ['block.upi'],
+              preferences: {
+                show_default_blocks: true
+              }
+            }
           },
           theme: {
             color: "#F27D26",
           },
+          modal: {
+            ondismiss: function() {
+              setIsSubmitting(false);
+            }
+          }
         };
 
         const rzp = new (window as any).Razorpay(options);
@@ -421,25 +453,6 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
                           </div>
                         </div>
                       )}
-                      {errors.auth && (
-                        <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3">
-                          <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-sm font-bold text-red-600">Login Required</p>
-                            <p className="text-xs text-red-500 leading-relaxed">{errors.auth}</p>
-                            <Button 
-                              variant="link" 
-                              className="p-0 h-auto text-xs text-brand-orange font-bold mt-1"
-                              onClick={() => {
-                                onClose();
-                                document.getElementById('my-bookings')?.scrollIntoView({ behavior: 'smooth' });
-                              }}
-                            >
-                              Go to Login
-                            </Button>
-                          </div>
-                        </div>
-                      )}
 
                       <div className="space-y-1">
                         <div className={`bg-gray-50 p-3 md:p-4 rounded-2xl ${errors.pickupLocation ? 'border border-red-500 bg-red-50' : ''}`}>
@@ -457,7 +470,7 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
                             <h4 className="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Pickup</h4>
                             <div className="flex items-center justify-between text-[11px] md:text-xs">
                               <span className="text-gray-500 flex items-center gap-1.5"><CalendarIcon className="w-3 h-3" /> Date</span>
-                              <Popover>
+                              <Popover open={isPickupDateOpen} onOpenChange={setIsPickupDateOpen}>
                                 <PopoverTrigger render={
                                   <button className={`font-bold transition-colors ${errors.pickupDate ? 'text-red-500' : 'text-brand-dark hover:text-brand-orange'}`}>
                                     {bookingDetails.pickupDate ? format(bookingDetails.pickupDate, 'MMM dd, yyyy') : 'Select Date'}
@@ -470,6 +483,7 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
                                     onSelect={(date) => {
                                       setBookingDetails(prev => ({ ...prev, pickupDate: date }));
                                       if (errors.pickupDate) setErrors(prev => ({ ...prev, pickupDate: '' }));
+                                      setIsPickupDateOpen(false);
                                     }}
                                     disabled={isDateDisabled}
                                     initialFocus
@@ -479,7 +493,7 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
                             </div>
                             <div className="flex items-center justify-between text-[11px] md:text-xs">
                               <span className="text-gray-500 flex items-center gap-1.5"><Clock className="w-3 h-3" /> Time</span>
-                              <Popover>
+                              <Popover open={isPickupTimeOpen} onOpenChange={setIsPickupTimeOpen}>
                                 <PopoverTrigger render={
                                   <button className={`font-bold transition-colors ${errors.pickupTime ? 'text-red-500' : 'text-brand-dark hover:text-brand-orange'}`}>
                                     {bookingDetails.pickupTime || 'Select Time'}
@@ -502,6 +516,7 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
                                             onClick={() => {
                                               setBookingDetails(prev => ({ ...prev, pickupTime: time }));
                                               if (errors.pickupTime) setErrors(prev => ({ ...prev, pickupTime: '' }));
+                                              setIsPickupTimeOpen(false);
                                             }}
                                             className={`py-2 px-1 rounded-lg text-[10px] font-bold transition-all ${
                                               isSelected 
@@ -530,7 +545,7 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
                             <h4 className="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Drop-off</h4>
                             <div className="flex items-center justify-between text-[11px] md:text-xs">
                               <span className="text-gray-500 flex items-center gap-1.5"><CalendarIcon className="w-3 h-3" /> Date</span>
-                              <Popover>
+                              <Popover open={isDropoffDateOpen} onOpenChange={setIsDropoffDateOpen}>
                                 <PopoverTrigger render={
                                   <button className={`font-bold transition-colors ${errors.dropoffDate ? 'text-red-500' : 'text-brand-dark hover:text-brand-orange'}`}>
                                     {bookingDetails.dropoffDate ? format(bookingDetails.dropoffDate, 'MMM dd, yyyy') : 'Select Date'}
@@ -543,6 +558,7 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
                                     onSelect={(date) => {
                                       setBookingDetails(prev => ({ ...prev, dropoffDate: date }));
                                       if (errors.dropoffDate) setErrors(prev => ({ ...prev, dropoffDate: '' }));
+                                      setIsDropoffDateOpen(false);
                                     }}
                                     disabled={isDateDisabled}
                                     initialFocus
@@ -552,7 +568,7 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
                             </div>
                             <div className="flex items-center justify-between text-[11px] md:text-xs">
                               <span className="text-gray-500 flex items-center gap-1.5"><Clock className="w-3 h-3" /> Time</span>
-                              <Popover>
+                              <Popover open={isDropoffTimeOpen} onOpenChange={setIsDropoffTimeOpen}>
                                 <PopoverTrigger render={
                                   <button className={`font-bold transition-colors ${errors.dropoffTime ? 'text-red-500' : 'text-brand-dark hover:text-brand-orange'}`}>
                                     {bookingDetails.dropoffTime || 'Select Time'}
@@ -575,6 +591,7 @@ export default function BookingModal({ bike, isOpen, onClose, bookingDetails, se
                                             onClick={() => {
                                               setBookingDetails(prev => ({ ...prev, dropoffTime: time }));
                                               if (errors.dropoffTime) setErrors(prev => ({ ...prev, dropoffTime: '' }));
+                                              setIsDropoffTimeOpen(false);
                                             }}
                                             className={`py-2 px-1 rounded-lg text-[10px] font-bold transition-all ${
                                               isSelected 

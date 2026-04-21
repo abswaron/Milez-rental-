@@ -24,6 +24,12 @@ export default function Hero({ onSearch }: HeroProps) {
   const [dropoffTime, setDropoffTime] = useState<string>('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const [isLocationOpen, setIsLocationOpen] = useState(false);
+  const [isPickupDateOpen, setIsPickupDateOpen] = useState(false);
+  const [isPickupTimeOpen, setIsPickupTimeOpen] = useState(false);
+  const [isDropoffDateOpen, setIsDropoffDateOpen] = useState(false);
+  const [isDropoffTimeOpen, setIsDropoffTimeOpen] = useState(false);
+
   // Update time if it becomes unavailable when date changes
   const handlePickupDateSelect = (date: Date | undefined) => {
     setPickupDate(date);
@@ -161,7 +167,7 @@ export default function Hero({ onSearch }: HeroProps) {
               <div className="space-y-6 md:space-y-8">
                 <div className="space-y-3">
                   <label className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] ml-1">Rent Location</label>
-                  <Popover>
+                  <Popover open={isLocationOpen} onOpenChange={setIsLocationOpen}>
                     <PopoverTrigger render={
                       <Button variant="outline" className={`w-full bg-white/5 border-white/10 text-white h-16 md:h-20 rounded-2xl focus:ring-brand-orange border hover:bg-white/10 transition-all group px-4 md:px-6 justify-start text-left ${errors.rentLocation ? 'border-red-500/50 bg-red-500/5' : ''}`}>
                         <div className="flex items-center gap-3 md:gap-4 w-full h-full">
@@ -201,6 +207,7 @@ export default function Hero({ onSearch }: HeroProps) {
                               setRentLocation(loc);
                               setLocationSearch('');
                               if (errors.rentLocation) setErrors(prev => ({ ...prev, rentLocation: '' }));
+                              setIsLocationOpen(false);
                             }}
                             className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors text-left group"
                           >
@@ -230,7 +237,7 @@ export default function Hero({ onSearch }: HeroProps) {
                     <label className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] ml-1">Pickup Date & Time</label>
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                       <div className="md:col-span-3 space-y-1">
-                        <Popover>
+                        <Popover open={isPickupDateOpen} onOpenChange={setIsPickupDateOpen}>
                           <PopoverTrigger render={
                             <Button variant="outline" className={`w-full h-16 md:h-20 bg-white/5 border-white/10 text-white justify-start text-left font-bold rounded-2xl hover:bg-white/10 transition-all border group px-4 md:px-6 ${errors.pickupDate ? 'border-red-500/50 bg-red-500/5' : ''}`}>
                               <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-brand-orange/10 flex items-center justify-center shrink-0 mr-3 md:mr-4 group-hover:bg-brand-orange/20 transition-colors">
@@ -249,6 +256,7 @@ export default function Hero({ onSearch }: HeroProps) {
                               onSelect={(date) => {
                                 handlePickupDateSelect(date);
                                 if (errors.pickupDate) setErrors(prev => ({ ...prev, pickupDate: '' }));
+                                setIsPickupDateOpen(false);
                               }}
                               disabled={isDateDisabled}
                               initialFocus
@@ -259,7 +267,7 @@ export default function Hero({ onSearch }: HeroProps) {
                         {errors.pickupDate && <p className="text-red-400 text-[10px] font-bold uppercase ml-1 tracking-wide">{errors.pickupDate}</p>}
                       </div>
                       <div className="md:col-span-2 space-y-1">
-                        <Popover>
+                        <Popover open={isPickupTimeOpen} onOpenChange={setIsPickupTimeOpen}>
                           <PopoverTrigger render={
                             <Button variant="outline" className={`w-full h-16 md:h-20 bg-white/5 border-white/10 text-white justify-start text-left font-bold rounded-2xl hover:bg-white/10 transition-all border group px-4 md:px-6 ${errors.pickupTime ? 'border-red-500/50 bg-red-500/5' : ''}`}>
                               <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-brand-orange/10 flex items-center justify-center shrink-0 mr-3 md:mr-4 group-hover:bg-brand-orange/20 transition-colors">
@@ -288,6 +296,7 @@ export default function Hero({ onSearch }: HeroProps) {
                                       onClick={() => {
                                         setPickupTime(time);
                                         if (errors.pickupTime) setErrors(prev => ({ ...prev, pickupTime: '' }));
+                                        setIsPickupTimeOpen(false);
                                       }}
                                       className={`py-2 px-1 rounded-lg text-[10px] font-bold transition-all ${
                                         isSelected 
@@ -313,7 +322,7 @@ export default function Hero({ onSearch }: HeroProps) {
                     <label className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] ml-1">Dropoff Date & Time</label>
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                       <div className="md:col-span-3 space-y-1">
-                        <Popover>
+                        <Popover open={isDropoffDateOpen} onOpenChange={setIsDropoffDateOpen}>
                           <PopoverTrigger render={
                             <Button variant="outline" className={`w-full h-16 md:h-20 bg-white/5 border-white/10 text-white justify-start text-left font-bold rounded-2xl hover:bg-white/10 transition-all border group px-4 md:px-6 ${errors.dropoffDate ? 'border-red-500/50 bg-red-500/5' : ''}`}>
                               <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-brand-orange/10 flex items-center justify-center shrink-0 mr-3 md:mr-4 group-hover:bg-brand-orange/20 transition-colors">
@@ -332,6 +341,7 @@ export default function Hero({ onSearch }: HeroProps) {
                               onSelect={(date) => {
                                 handleDropoffDateSelect(date);
                                 if (errors.dropoffDate) setErrors(prev => ({ ...prev, dropoffDate: '' }));
+                                setIsDropoffDateOpen(false);
                               }}
                               disabled={isDateDisabled}
                               initialFocus
@@ -342,7 +352,7 @@ export default function Hero({ onSearch }: HeroProps) {
                         {errors.dropoffDate && <p className="text-red-400 text-[10px] font-bold uppercase ml-1 tracking-wide">{errors.dropoffDate}</p>}
                       </div>
                       <div className="md:col-span-2 space-y-1">
-                        <Popover>
+                        <Popover open={isDropoffTimeOpen} onOpenChange={setIsDropoffTimeOpen}>
                           <PopoverTrigger render={
                             <Button variant="outline" className={`w-full h-16 md:h-20 bg-white/5 border-white/10 text-white justify-start text-left font-bold rounded-2xl hover:bg-white/10 transition-all border group px-4 md:px-6 ${errors.dropoffTime ? 'border-red-500/50 bg-red-500/5' : ''}`}>
                               <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-brand-orange/10 flex items-center justify-center shrink-0 mr-3 md:mr-4 group-hover:bg-brand-orange/20 transition-colors">
@@ -371,6 +381,7 @@ export default function Hero({ onSearch }: HeroProps) {
                                       onClick={() => {
                                         setDropoffTime(time);
                                         if (errors.dropoffTime) setErrors(prev => ({ ...prev, dropoffTime: '' }));
+                                        setIsDropoffTimeOpen(false);
                                       }}
                                       className={`py-2 px-1 rounded-lg text-[10px] font-bold transition-all ${
                                         isSelected 

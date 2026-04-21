@@ -1,7 +1,7 @@
 export interface Bike {
   id: string;
   name: string;
-  type: 'Scooter' | 'Sport' | 'Cruiser' | 'Electric';
+  type: 'Scooter' | 'Sport' | 'Cruiser' | 'Electric' | 'Adventure';
   pricePerDay: number;
   image: string;
   transmission: 'Automatic' | 'Manual';

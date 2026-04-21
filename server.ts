@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs";
 import { Resend } from "resend";
@@ -9,26 +8,37 @@ import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import crypto from "crypto";
 
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 dotenv.config();
 
-const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf-8"));
-
-if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: firebaseConfig.projectId,
-  });
+// Lazy initialization helpers
+let _db: any = null;
+function getDb() {
+  if (_db) return _db;
+  const configPath = path.resolve(process.cwd(), "firebase-applet-config.json");
+  const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  if (!admin.apps.length) {
+    admin.initializeApp({ projectId: config.projectId });
+  }
+  _db = getFirestore(config.firestoreDatabaseId);
+  return _db;
 }
 
-const db = getFirestore(firebaseConfig.firestoreDatabaseId);
-
-const razorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET 
-  ? new Razorpay({
+let _razorpay: any = null;
+function getRazorpay() {
+  if (_razorpay) return _razorpay;
+  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+    _razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID,
       key_secret: process.env.RAZORPAY_KEY_SECRET,
-    })
-  : null;
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+    });
+  }
+  return _razorpay;
+}
 
 // File-based storage for bookings to persist across restarts
 const BOOKINGS_FILE = path.join(process.cwd(), "bookings.json");
@@ -108,8 +118,36 @@ async function sendConfirmationEmail(bike: any, bookingDetails: any, userDetails
 }
 
 async function startServer() {
+  console.log("Starting server at", new Date().toISOString());
+  console.log("Environment NODE_ENV:", process.env.NODE_ENV);
+  console.log("Current working directory:", process.cwd());
+  
   const app = express();
   const PORT = 3000;
+
+  // IMMEDIATE TEST ROUTE
+  app.get("/ping-check", (req, res) => res.send("PONG"));
+
+  // Diagnostics
+  app.get("/diagnostic", (req, res) => {
+    res.send(`Server is alive. Time: ${new Date().toISOString()}. Env: ${process.env.NODE_ENV}. CWD: ${process.cwd()}`);
+  });
+
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "ok", 
+      mode: process.env.NODE_ENV,
+      cwd: process.cwd(),
+      distInfo: {
+        cwd_dist: fs.existsSync(path.resolve(process.cwd(), "dist")),
+        dirname_dist: fs.existsSync(path.resolve(__dirname, "dist"))
+      }
+    });
+  });
+
+  app.get("/api/ping", (req, res) => {
+    res.json({ pong: true, time: new Date().toISOString() });
+  });
 
   // Razorpay Webhook - MUST use raw body for signature verification
   app.post("/api/razorpay-webhook", express.json({
@@ -146,6 +184,7 @@ async function startServer() {
         console.log(`Razorpay Payment successful for user ${userId}, bike ${bikeId}`);
 
         try {
+          const db = getDb();
           const bookingsRef = db.collection("users").doc(userId).collection("bookings");
           const q = await bookingsRef.where("bike.id", "==", bikeId).orderBy("timestamp", "desc").limit(1).get();
 
@@ -175,6 +214,7 @@ async function startServer() {
 
   // Razorpay Order Creation
   app.post("/api/create-razorpay-order", async (req, res) => {
+    const razorpay = getRazorpay();
     if (!razorpay) {
       return res.status(500).json({ error: "Razorpay is not configured." });
     }
@@ -201,6 +241,7 @@ async function startServer() {
 
   // Razorpay Refund Endpoint
   app.post("/api/refund-booking", async (req, res) => {
+    const razorpay = getRazorpay();
     if (!razorpay) {
       return res.status(500).json({ error: "Razorpay is not configured." });
     }
@@ -248,18 +289,41 @@ async function startServer() {
   app.get("/api/booked-slots", (req, res) => res.json({}));
   app.get("/api/my-bookings", (req, res) => res.json({ success: true, bookings: [] }));
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  // Decision: Dev or Prod serving
+  const distPath = path.resolve(process.cwd(), "dist");
+  const useDevVite = process.env.NODE_ENV !== "production" && !fs.existsSync(distPath);
+
+  if (useDevVite) {
+    console.log("Mode: DEVELOPMENT (Vite middleware)");
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    console.log("Mode: PRODUCTION (Static serving from dist)");
+    console.log("Serving static files from:", distPath);
+    
     app.use(express.static(distPath));
+    
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      const indexPath = path.join(distPath, "index.html");
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).send(`
+          <html>
+            <body style="font-family: sans-serif; padding: 40px; text-align: center;">
+              <h1>404 - Application Shell Not Found</h1>
+              <p>The builder is still preparing the production files. Please wait 10 seconds and refresh.</p>
+              <div style="margin-top: 20px; font-size: 12px; color: #666;">
+                Path: ${indexPath}
+              </div>
+            </body>
+          </html>
+        `);
+      }
     });
   }
 
